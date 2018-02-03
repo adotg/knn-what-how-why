@@ -128,8 +128,13 @@ function setdrawingContext (context /* drawing context */) {
 			.data(distance);
 
 		dSel
+			.exit()
+				.remove();
+
+		dSel
 			.enter()
 			.append('div')
+				.attr('id', (d, i) => `dist-${i}`)
 				.classed('block', true)
 			.merge(dSel)
 				.style('background', d => d.color)
@@ -148,7 +153,7 @@ function setdrawingContext (context /* drawing context */) {
 					.append('circle')
 					.attr('cx', (d, i) => context.scales.x(df.at(i, xAxisField)))
 					.attr('cy', (d, i) => context.scales.y(df.at(i, yAxisField)))
-					.attr('id', (d, i) => i)
+					.attr('id', (d, i) => `pt-${i}`)
 					.style('fill', (d, i) =>  d3.schemeSet2[df.col(config.color)
 							.representative(df.at(i, config.color))])
 					.attr('r', gConfig.r)
@@ -183,11 +188,16 @@ function setdrawingContext (context /* drawing context */) {
 				const dist = context.distanceFn([valx, valy], [tarx, tary]);
 				distance.push({ 
 					val: dist,
+					colorSeed: df.at(i, context.colorField),
 					color: d3.schemeSet2[df.col(context.colorField).representative(df.at(i, context.colorField))]
 				});
 				showDistance(distance);
 			}
-		}
+
+			return distance;
+		},
+
+		showDistance: showDistance
 	}
 }
 
@@ -214,6 +224,7 @@ function init (mount, df, config) {
 }
 
 const svg = d3.select('#viz svg');
+const slider = d3.select('#k');
 const dpElem = d3.select('#info'); /* display panel element */
 const dataset = new Dataset(KNN_NS.data, KNN_NS.meta);
 const distanceFn = (p1, p2) => {
@@ -235,10 +246,99 @@ const drwctx = init(
 	}
 );
 
-svg.on('click', function (e) {
+let distance;
+const partialProcessState = ['sort', 'filterAndVote'];
+let processStateIndex = -1;
+svg.on('click', async function () {
 	const x = d3.event.pageX;
 	const y = d3.event.pageY;
 
 	drwctx.addNewPoint([x, y]);
-	drwctx.findNeighbours([x, y]);
+	distance = await drwctx.findNeighbours([x, y]);
+	processStateIndex = 0;
 });
+
+function applyFade(target, src, set) {
+	if (target === src.node()) { return; }
+
+	src.classed('i-focus-ns', set);
+	let id = src.attr('id');
+	id = id.match(/dist-(\d+)/)[1];
+	d3.select(`#pt-${id}`).classed('i-focus-ws', set);
+}
+
+dpElem
+	.on('mouseover', function ()  {
+		const target = this;
+		const block = d3.select(d3.event.srcElement);
+		applyFade(target, block, true);
+	})
+	.on('mouseout', function () {
+		const target = this;
+		const block = d3.select(d3.event.srcElement);
+		applyFade(target, block, false);
+	});
+
+function getDataElement (e) {
+	const path = e.path;
+	let elem = null;
+	for (let i = 0, l = path.length; i < l; i++) {
+		if (!path[i].getAttribute) {
+			break;
+		} else if (path[i].getAttribute('data')) {
+			elem = path[i];
+			break;
+		} else if (path[i].nodeName === 'LI') {
+			break;
+		}
+	}
+
+	return elem;
+}
+
+function updateProcessStatus (currentIndex) {
+	if (currentIndex === partialProcessState.length) { return; }
+	const currProcess = d3.select(`#action-${partialProcessState[currentIndex]}`);
+	currProcess
+		.classed('process-completed', true)
+		.classed('process-current', false);
+
+	const nextProcess = d3.select(`#action-${partialProcessState[currentIndex + 1]}`);
+	nextProcess	
+		.classed('process-current', true)
+		.classed('process-pending', false);
+}
+
+function sort () {
+	distance = distance.sort((m, n) => m.val - n.val);
+	drwctx.showDistance(distance);
+}
+
+function filterAndVote (elem) {
+	let k = parseInt(elem.value, 10);
+	k = 2 * k + 1; // Make it odd always so that even no of vote does not arise
+	distance._future = distance.slice(0, k);
+	drwctx.showDistance(distance._future);	
+}
+
+d3.select('#control')
+	.on('click', function () {
+		const elem = getDataElement(d3.event);
+		if (!elem) { return; }
+
+		const action = elem.getAttribute('data');
+		const index = partialProcessState.indexOf(action);
+		
+		if (index < processStateIndex || index > processStateIndex) { return; }
+		
+		window[action](elem);
+
+		if (processStateIndex === partialProcessState.length - 1) { return; }
+		updateProcessStatus(index);
+		processStateIndex++;
+	});
+
+
+d3.select('#k-val').on('input', function () {
+	d3.select('#k-val-pane').text(2 * parseInt(this.value, 10) + 1)
+})
