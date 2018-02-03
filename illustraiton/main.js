@@ -122,6 +122,20 @@ function setdrawingContext (context /* drawing context */) {
 		});		
 	}
 
+	function showDistance(distance) {
+		const dSel = dpElem
+			.selectAll('.block')
+			.data(distance);
+
+		dSel
+			.enter()
+			.append('div')
+				.classed('block', true)
+			.merge(dSel)
+				.style('background', d => d.color)
+				.text(d => Math.round(d.val));
+	}
+
 	return {
 		addClassifiedPoints: (df, config) => {
 			const xAxisField = config.x;
@@ -135,7 +149,8 @@ function setdrawingContext (context /* drawing context */) {
 					.attr('cx', (d, i) => context.scales.x(df.at(i, xAxisField)))
 					.attr('cy', (d, i) => context.scales.y(df.at(i, yAxisField)))
 					.attr('id', (d, i) => i)
-					.style('fill', (d, i) =>  d3.schemeSet2[df.col(config.color).representative(df.at(i, config.color))])
+					.style('fill', (d, i) =>  d3.schemeSet2[df.col(config.color)
+							.representative(df.at(i, config.color))])
 					.attr('r', gConfig.r)
 					.classed('data-point', true);
 
@@ -154,8 +169,10 @@ function setdrawingContext (context /* drawing context */) {
 		findNeighbours: async point => {
 			const valx = context.scales.x.invert(point[0]);
 			const valy = context.scales.y.invert(point[1]);
-			const body = context.df.body;
-			const header = context.df.header;
+			const df = context.df;
+			const body = df.body;
+			const header = df.header;
+			const distance = [];
 			for(let i = 0, l = body.length; i < l; i++) {
 				const ix = header.indexOf(context.xAxisField);
 				const iy = header.indexOf(context.yAxisField);
@@ -163,7 +180,12 @@ function setdrawingContext (context /* drawing context */) {
 				const tarx = row[ix];
 				const tary = row[iy];
 				await drawLine([valx, valy], [tarx, tary]);
-				
+				const dist = context.distanceFn([valx, valy], [tarx, tary]);
+				distance.push({ 
+					val: dist,
+					color: d3.schemeSet2[df.col(context.colorField).representative(df.at(i, context.colorField))]
+				});
+				showDistance(distance);
 			}
 		}
 	}
@@ -175,10 +197,12 @@ function init (mount, df, config) {
 	const xDomain = [df.col(xAxisField).min() - 10, df.col(xAxisField).max() + 10];
 	const yDomain = [df.col(yAxisField).min() - 10, df.col(yAxisField).max() + 10];
 	const context = {
-		df: df, 
+		df: df,
+		distanceFn: config.distanceFn,
 		mount: mount,
 		xAxisField: config.x,
 		yAxisField: config.y,
+		colorField: config.color,
 		scales: {
 			x: d3.scaleLinear().domain(xDomain).range(config.xRange),
 			y: d3.scaleLinear().domain(yDomain).range(config.yRange),
@@ -190,7 +214,13 @@ function init (mount, df, config) {
 }
 
 const svg = d3.select('#viz svg');
+const dpElem = d3.select('#info'); /* display panel element */
 const dataset = new Dataset(KNN_NS.data, KNN_NS.meta);
+const distanceFn = (p1, p2) => {
+	const dx = p1[0] - p2[0];
+	const dy = p1[1] - p2[1];
+	return Math.sqrt(dx * dx + dy * dy);
+}
 const drwctx = init(
 	svg,
 	dataset,
@@ -199,7 +229,9 @@ const drwctx = init(
 		y: 'y',
 		color: 'c',
 		xRange: [0, 500],
-		yRange: [500, 0]
+		yRange: [500, 0],
+		distanceFn: distanceFn,
+		dpElem: dpElem
 	}
 );
 
