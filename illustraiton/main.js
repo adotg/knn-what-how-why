@@ -4,7 +4,7 @@ const arrToObj = arr => {
 		map[arr[i]] = i;
 	}
 	return map;
-}
+};
 
 class Field {
 	constructor (name, data) {
@@ -91,35 +91,122 @@ class Dataset {
 	}
 }
 
-const df = new Dataset(KNN_NS.data, KNN_NS.meta);
-const svg = d3.select('#viz svg');
+const gConfig = { /* global config */
+	r: 10
+}
 
-function plotPoints(mount, data, config) {
+function setdrawingContext (context /* drawing context */) {
+	function drawLine (from, to) {
+		return new Promise(res => {
+			const connector = context.mount.select('.connector');
+			const transition = d3.transition().duration(300).ease(d3.easeLinear)
+				.on('end', () => {
+					// connector.selectAll('line').data([]).exit().remove();
+					res();
+				})
+
+			const dSel = connector
+					.selectAll('line')
+					.data([[from, to]]);
+			const eSel = dSel
+				.enter()
+				.append('line')
+				.merge(dSel)
+					.attr('x1', d => context.scales.x(d[0][0]))
+					.attr('y1', d => context.scales.y(d[0][1]))
+					.attr('x2', d => context.scales.x(d[0][0]))
+					.attr('y2', d => context.scales.y(d[0][1]))
+					.transition(transition)
+					.attr('x2', d => context.scales.x(d[1][0]))
+					.attr('y2', d => context.scales.y(d[1][1]));
+		});		
+	}
+
+	return {
+		addClassifiedPoints: (df, config) => {
+			const xAxisField = config.x;
+			const yAxisField = config.y;
+
+			context.mount.append('g').classed('points', true)
+				.selectAll('circle')
+				.data(df.body)
+				.enter()
+					.append('circle')
+					.attr('cx', (d, i) => context.scales.x(df.at(i, xAxisField)))
+					.attr('cy', (d, i) => context.scales.y(df.at(i, yAxisField)))
+					.attr('id', (d, i) => i)
+					.style('fill', (d, i) =>  d3.schemeSet2[df.col(config.color).representative(df.at(i, config.color))])
+					.attr('r', gConfig.r)
+					.classed('data-point', true);
+
+			context.mount.append('g').classed('connector', true);
+		},
+
+		addNewPoint: (pos) => {
+			context.mount.select('.points')
+				.append('circle')
+				.attr('cx', pos[0])
+				.attr('cy', pos[1])
+				.attr('r', gConfig.r)
+				.classed('data-point', true);		
+		},
+
+		findNeighbours: async point => {
+			const valx = context.scales.x.invert(point[0]);
+			const valy = context.scales.y.invert(point[1]);
+			const body = context.df.body;
+			const header = context.df.header;
+			for(let i = 0, l = body.length; i < l; i++) {
+				const ix = header.indexOf(context.xAxisField);
+				const iy = header.indexOf(context.yAxisField);
+				const row = body[i];
+				const tarx = row[ix];
+				const tary = row[iy];
+				await drawLine([valx, valy], [tarx, tary]);
+				
+			}
+		}
+	}
+}
+
+function init (mount, df, config) {
 	const xAxisField = config.x;
 	const yAxisField = config.y;
 	const xDomain = [df.col(xAxisField).min() - 10, df.col(xAxisField).max() + 10];
 	const yDomain = [df.col(yAxisField).min() - 10, df.col(yAxisField).max() + 10];
-	const scales = {
-		x: d3.scaleLinear().domain(xDomain).range(config.xRange),
-		y: d3.scaleLinear().domain(yDomain).range(config.yRange),
+	const context = {
+		df: df, 
+		mount: mount,
+		xAxisField: config.x,
+		yAxisField: config.y,
+		scales: {
+			x: d3.scaleLinear().domain(xDomain).range(config.xRange),
+			y: d3.scaleLinear().domain(yDomain).range(config.yRange),
+		}
 	};
-
-	svg
-		.selectAll('circle')
-		.data(df.body)
-		.enter()
-			.append('circle')
-			.attr('cx', (d, i) => scales.x(df.at(i, xAxisField)))
-			.attr('cy', (d, i) => scales.y(df.at(i, yAxisField)))
-			.style('fill', (d, i) =>  d3.schemeSet2[df.col(config.color).representative(df.at(i, config.color))])
-			.attr('r', 10)
-			.classed('data-point', true);
+	const drawingContext = setdrawingContext(context);
+	drawingContext.addClassifiedPoints(df, config);
+	return drawingContext;
 }
 
-plotPoints(svg, df, { 
-	x: 'x', 
-	y: 'y',
-	color: 'c',
-	xRange: [0, 500],
-	yRange: [500, 0]
+const svg = d3.select('#viz svg');
+const dataset = new Dataset(KNN_NS.data, KNN_NS.meta);
+const drwctx = init(
+	svg,
+	dataset,
+	{ 
+		x: 'x', 
+		y: 'y',
+		color: 'c',
+		xRange: [0, 500],
+		yRange: [500, 0]
+	}
+);
+
+svg.on('click', function (e) {
+	const x = d3.event.pageX;
+	const y = d3.event.pageY;
+
+	drwctx.addNewPoint([x, y]);
+	drwctx.findNeighbours([x, y]);
 });
