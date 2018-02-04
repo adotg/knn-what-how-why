@@ -107,7 +107,7 @@ function setdrawingContext (context /* drawing context */) {
 	function drawLine (from, to) {
 		return new Promise(res => {
 			const connector = context.mount.select('.connector');
-			const transition = d3.transition().duration(300).ease(d3.easeLinear)
+			const transition = d3.transition().duration(250).ease(d3.easeLinear)
 				.on('end', () => {
 					connector.selectAll('line').style('display', 'none');
 					res();
@@ -181,15 +181,18 @@ function setdrawingContext (context /* drawing context */) {
 				.classed('eval-point', true);
 		},
 
-		classifyNewPoint: (evalPoint, cls) => {
+		classifyNewPoint: (cls) => {
 			context.mount.selectAll('.eval-point')
-				.classed('eval-point', false)
-				.transition().duration(100)
-				.style('fill', (d, i) =>  d3.schemeSet2[context.df.col(context.colorField).representative(cls)]);
-			evalPoint[0] = context.scales.x.invert(evalPoint[0]);
-			evalPoint[1] = context.scales.x.invert(evalPoint[1]);
-			evalPoint[2] = cls;
-			context.df.addNewPoint(evalPoint);
+					.transition().duration(100)
+					.style('fill', (d, i) =>  d3.schemeSet2[context.df.col(context.colorField).representative(cls)]);
+			return evalPoint => {
+				evalPoint[0] = parseInt(context.scales.x.invert(evalPoint[0]), 10);
+				evalPoint[1] = parseInt(context.scales.y.invert(evalPoint[1]), 10);
+				evalPoint[2] = cls;
+				context.mount.selectAll('.eval-point')
+					.classed('eval-point', false)
+				context.df.addNewPoint(evalPoint);
+			}
 		},
 
 		findNeighbours: async point => {
@@ -287,8 +290,8 @@ const drwctx = init(
 		x: 'x', 
 		y: 'y',
 		color: 'c',
-		xRange: [0, 500],
-		yRange: [500, 0],
+		xRange: [0, 800],
+		yRange: [800, 0],
 		distanceFn: distanceFn,
 		dpElem: dpElem
 	}
@@ -297,8 +300,21 @@ const drwctx = init(
 let distance;
 const partialProcessState = ['calcdist', 'sort', 'filterAndVote'];
 let processStateIndex = -1;
-const evalPoint = [null, null, null];
+let evalPoint = null;
+let commitFn = null;
+
+function resetProcessStatus () {
+	let processStateIndex = -1;
+	d3.selectAll('.process-current').classed('process-current', false).classed('process-pending', true);
+	d3.selectAll('.process-completed').classed('process-completed', false).classed('process-pending', true);
+	
+	d3.select('.process-pending').classed('process-pending', false).classed('process-current', true);
+}
+
 svg.on('click', async function () {
+	if (evalPoint && commitFn) { commitFn(evalPoint); resetProcessStatus() }
+
+	evalPoint = [null, null, null];
 	evalPoint[0] = d3.event.pageX;
 	evalPoint[1] = d3.event.pageY;
 
@@ -390,7 +406,7 @@ function filterAndVote (elem) {
 	}
 
 	drwctx.showVote(result, winner);
-	drwctx.classifyNewPoint(evalPoint, winner);
+	commitFn = drwctx.classifyNewPoint(winner);
 }
 
 d3.select('#control')
