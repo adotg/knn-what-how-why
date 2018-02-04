@@ -81,6 +81,14 @@ class Dataset {
 		})
 	}
 
+	addNewPoint (pointArr) {
+		this.body.push(pointArr);
+		this.header.forEach((header, i) => {
+			this.fields[header].data.push(pointArr[i]);
+		});
+		return this;
+	}
+
 	col (name) {
 		return this.fields[name];
 	}
@@ -101,7 +109,7 @@ function setdrawingContext (context /* drawing context */) {
 			const connector = context.mount.select('.connector');
 			const transition = d3.transition().duration(300).ease(d3.easeLinear)
 				.on('end', () => {
-					// connector.selectAll('line').data([]).exit().remove();
+					connector.selectAll('line').style('display', 'none');
 					res();
 				})
 
@@ -112,6 +120,7 @@ function setdrawingContext (context /* drawing context */) {
 				.enter()
 				.append('line')
 				.merge(dSel)
+					.style('display', 'inherit')
 					.attr('x1', d => context.scales.x(d[0][0]))
 					.attr('y1', d => context.scales.y(d[0][1]))
 					.attr('x2', d => context.scales.x(d[0][0]))
@@ -168,7 +177,19 @@ function setdrawingContext (context /* drawing context */) {
 				.attr('cx', pos[0])
 				.attr('cy', pos[1])
 				.attr('r', gConfig.r)
-				.classed('data-point', true);		
+				.classed('data-point', true)
+				.classed('eval-point', true);
+		},
+
+		classifyNewPoint: (evalPoint, cls) => {
+			context.mount.selectAll('.eval-point')
+				.classed('eval-point', false)
+				.transition().duration(100)
+				.style('fill', (d, i) =>  d3.schemeSet2[context.df.col(context.colorField).representative(cls)]);
+			evalPoint[0] = context.scales.x.invert(evalPoint[0]);
+			evalPoint[1] = context.scales.x.invert(evalPoint[1]);
+			evalPoint[2] = cls;
+			context.df.addNewPoint(evalPoint);
 		},
 
 		findNeighbours: async point => {
@@ -197,7 +218,34 @@ function setdrawingContext (context /* drawing context */) {
 			return distance;
 		},
 
-		showDistance: showDistance
+		showDistance: showDistance,
+
+		showVote: (result, winner) => {
+			const mount = d3.select('#voting-res');
+			const resArr = [];
+			let winnerIndex = -1;
+			let i = 0;
+			// Transform result to array so that it can be joined with dom
+			for (let res in result) {
+				resArr.push([res, result[res]]);
+				if (res === winner) {
+					winnerIndex = i;
+				}
+				i++;
+			}
+
+			dSel = mount
+				.selectAll('p')
+				.data(resArr);
+
+			dSel.exit().remove();
+			dSel
+				.enter()
+					.append('p')
+				.merge(dSel)
+					.text(d => `${d[0]}: ${d[1]}`)
+					.style('opacity', (d, i) => i === winnerIndex ? 1 : 0.35);
+		}
 	}
 }
 
@@ -247,15 +295,18 @@ const drwctx = init(
 );
 
 let distance;
-const partialProcessState = ['sort', 'filterAndVote'];
+const partialProcessState = ['calcdist', 'sort', 'filterAndVote'];
 let processStateIndex = -1;
+const evalPoint = [null, null, null];
 svg.on('click', async function () {
-	const x = d3.event.pageX;
-	const y = d3.event.pageY;
+	evalPoint[0] = d3.event.pageX;
+	evalPoint[1] = d3.event.pageY;
 
-	drwctx.addNewPoint([x, y]);
-	distance = await drwctx.findNeighbours([x, y]);
+	drwctx.addNewPoint(evalPoint);
+	distance = await drwctx.findNeighbours(evalPoint);
 	processStateIndex = 0;
+	updateProcessStatus(processStateIndex);
+	processStateIndex++;
 });
 
 function applyFade(target, src, set) {
@@ -318,7 +369,28 @@ function filterAndVote (elem) {
 	let k = parseInt(elem.value, 10);
 	k = 2 * k + 1; // Make it odd always so that even no of vote does not arise
 	distance._future = distance.slice(0, k);
-	drwctx.showDistance(distance._future);	
+	drwctx.showDistance(distance._future);
+
+	// Voting
+	const result = {};
+	// Counts the vote from data
+	for (let i = 0, l = distance._future.length; i < l; i++) {
+		let key = distance._future[i].colorSeed;
+		result[key] = result[key] === undefined ? 1 : result[key] + 1;
+	};
+
+	// Declare winner
+	let winner;
+	let maxVote = 0;
+	for (let member in result) {
+		if (result[member] >= maxVote) {
+			maxVote = result[member];
+			winner = member;
+		}
+	}
+
+	drwctx.showVote(result, winner);
+	drwctx.classifyNewPoint(evalPoint, winner);
 }
 
 d3.select('#control')

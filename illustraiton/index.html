@@ -117,6 +117,16 @@
 			padding: 5px 10px;	
 		}
 
+		.voting-msg {
+			font-family: monospace;
+			font-size: 14px;
+			line-height: 20px;
+			margin-top: 10px;
+			background: #7986CB;
+			padding: 5px 10px;
+			color: white;
+		}
+
 		.i-focus-ns {
 			opacity: 1 !important;
 		}
@@ -153,11 +163,11 @@
 	<div id="control">
 			The algorithm consists of 4 steps.
 			<ol>
-				<li class='process-completed' id="action-calc-dist">
-					<b>Calculate distance</b> from the test point to every other point
+				<li class='process-current' id="action-calcdist">
+					<b>Calculate distance</b> from the test point to every other point.
 					<span class="p-state"> [Done]</span>
 				</li>
-				<li class="process-current" data="sort" id="action-sort">
+				<li class="process-pending" data="sort" id="action-sort">
 					<b>Sort</b> all the distances in ascending order
 					<span class="p-state"> [Done]</span>
 				</li>
@@ -167,6 +177,10 @@
 					<input type="range" min="0" max="10" value="3" class="slider" id="k-val"  data="filterAndVote" style="margin-top: 15px;">
 					<p class="warning-msg">
 						Click on the slider to start. In this case, the algorithm will start with default value. Alternatively you can drag the slider. <b>Current K value is:</b><span id="k-val-pane">3</span>
+					</p>
+
+					<p class="voting-msg" id="voting-res">
+						Voting result will be declared here.
 					</p>
 				</li>
 			</ol>
