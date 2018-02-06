@@ -1,3 +1,8 @@
+/*
+ * @disclaimer I don't normally code this bad. This trade-off between code quality vs time was an educated decision.
+ * But hey, the illustration works :-D
+ */
+
 const arrToObj = arr => {
     const map = {};
     for (let i = 0, l = arr.length; i < l; i++) {
