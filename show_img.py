@@ -17,4 +17,4 @@ def show_img(img_arr, label_arr, meta, index):
     rgb = np.dstack([r, g, b])
     img = Image.fromarray(np.array(rgb), 'RGB')
     display(img)
-    print(meta[label_arr[index][0]])
+    print(meta[label_arr[index][0]].decode('utf-8'))
