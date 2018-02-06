@@ -1,9 +1,13 @@
 import numpy as np
 
+def default_progress_fn(i, total):
+    pass
+
 class KNN:
-    def __init__ (self, k):
+    def __init__ (self, k, progress_fn=default_progress_fn):
         """ Pass k as hyperparameter"""
         self.k = k
+        self.progress_fn = progress_fn
 
     def train(self, X, y):
         """
@@ -35,5 +39,7 @@ class KNN:
             (labels, occurence) = np.unique(k_sorted_distance[:, 1], return_counts=True)
             label = labels[occurence.argsort()[0]]
             YPred[i] = label
+
+            self.progress_fn(i, num_training)
 
         return YPred
