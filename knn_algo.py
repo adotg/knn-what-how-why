@@ -2,12 +2,12 @@ import numpy as np
 
 class KNN:
     def __init__ (self, k):
-        """ Pass k as the hyperparameter"""
+        """ Pass k as hyperparameter"""
         self.k = k
 
     def train(self, X, y):
         """
-            X is the example training matrix. Every row of X contains one training example. Each training example
+            X is example training matrix. Every row of X contains one training example. Each training example
             may have `d` features. If there are `m` such examples then X is `m x d` matrix.
             y is the label matrix corrosponding to each training example. Hence y is `m x 1` matrix.
         """
@@ -25,7 +25,7 @@ class KNN:
         YPred = np.zeros(num_training, dtype = self.ty.dtype)
 
         for i in range(num_training):
-            # Euclidean distance is used to find out the distance between two datapoint.
+            # Euclidean distance is used to find out distance between two datapoint.
             distances = np.reshape(np.sqrt(np.sum(np.square(self.tX - X[i, :]), axis=1)), (-1, 1))
             # Along with the distance stack the labels so that we can vote easily
             distance_label = np.hstack((distances, self.ty))
