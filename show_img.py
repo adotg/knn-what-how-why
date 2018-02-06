@@ -2,7 +2,10 @@ from PIL import Image
 import numpy as np
 from IPython.display import display
 
-def show_img(img_arr, label_arr, meta, index):
+def default_label_fn(i, original):
+    return original
+
+def show_img(img_arr, label_arr, meta, index, label_fn=default_label_fn):
     """
         Given a numpy array of image from CIFAR-10 labels this method transform the data so that PIL can read and show
         the image.
@@ -17,4 +20,4 @@ def show_img(img_arr, label_arr, meta, index):
     rgb = np.dstack([r, g, b])
     img = Image.fromarray(np.array(rgb), 'RGB')
     display(img)
-    print(meta[label_arr[index][0]].decode('utf-8'))
+    print(label_fn(index, meta[label_arr[index][0]].decode('utf-8')))
