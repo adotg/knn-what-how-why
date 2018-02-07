@@ -1,0 +1,10 @@
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+__pycache__/
+
+# implementation / test file
+impl.py
+
+# Large data file
+data/

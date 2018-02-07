@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>KNN</title>
+	<style type="text/css">
+		body {
+			background: #fffde7;
+		}
+
+		#viz svg {
+			background: rgba(255, 224, 130, 0.13);
+			height: 800px;
+			width: 800px;
+			float: left;
+			cursor: pointer;
+		}
+
+		#control {
+			float: left;
+			margin: 10px 20px;
+			width: 300px;
+			font-size: 14px;
+			font-family: Verdana;
+		}
+
+		#control li {
+			margin: 0px 0px 10px 0px;
+			line-height: 20px;
+		}
+
+		.slider {
+		    -webkit-appearance: none;
+		    width: 100%;
+		    height: 5px;
+		    border-radius: 2.5px;
+		    background: #d3d3d3;
+		    outline: none;
+		    opacity: 0.7;
+		    -webkit-transition: .2s;
+		    transition: opacity .2s;
+		}
+
+		.slider:hover {
+		    opacity: 1;
+		}
+
+		.slider::-webkit-slider-thumb {
+		    -webkit-appearance: none;
+		    appearance: none;
+		    width: 15px;
+		    height: 15px;
+		    border-radius: 50%;
+		    background: #3f51b5;
+		    cursor: pointer;
+		}
+
+		.slider::-moz-range-thumb {
+		    width: 25px;
+		    height: 25px;
+		    border-radius: 50%;
+		    background: #4CAF50;
+		    cursor: pointer;
+		}
+
+		.data-point {
+			fill: black;
+			stroke: none;
+			fill-opacity: 0.4;
+		}
+
+		line {
+			fill: none;
+		  	stroke: #9b9b9b;
+		  	stroke-width: 6px;
+		  	stroke-dasharray: 8;
+		}
+
+		#info {
+			max-width: 600px;
+			display: flex;
+			padding: 5px 5px;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+
+		.block {
+			height: 50px;
+			width: 50px;
+			padding: 10px;
+			margin: 4px 8px;
+			background: #cacaca;
+			text-align: center;
+			vertical-align: middle;
+			line-height: 50px;
+			font-family: monospace;
+		  	font-size: 18px;
+		  	opacity: 0.85;
+		    color: #000000;
+		}
+
+		#k-val-pane {
+			font-family: monospace;
+			font-size: 16px;
+		}
+
+		.warning-msg {
+			font-family: Verdana;
+			font-size: 10px;
+			line-height: 15px;
+			margin-top: 10px;
+			background: rgba(255, 152, 0, 0.25);
+			padding: 5px 10px;
+		}
+
+		.process-msg {
+			font-family: Verdana;
+			font-size: 11px;
+			line-height: 20px;
+			margin-top: 10px;
+			background: #B3E5FC;
+			padding: 5px 10px;	
+		}
+
+		.voting-msg {
+			font-family: monospace;
+			font-size: 14px;
+			line-height: 20px;
+			margin-top: 10px;
+			background: #7986CB;
+			padding: 5px 10px;
+			color: white;
+		}
+
+		.i-focus-ns {
+			opacity: 1 !important;
+		}
+
+		.i-focus-ws {
+			fill-opacity: 0.8 !important;
+		}
+
+		.process-pending {
+			opacity: 0.15;
+		}
+
+		.process-completed {
+			opacity: 0.35;
+		}
+
+		.process-current {
+			cursor: pointer;
+		}
+
+		.process-current .ulable:hover {
+			text-decoration: underline;
+		}
+
+		.process-current .p-state, .process-pending .p-state {
+			display: none;
+		}
+
+		#control i {
+			font-size: 12px;
+		}
+	</style>
+</head>
+<body>
+	<div id="viz">
+		<svg id="svg" version="1.1" xmlns="http://www.w3.org/2000/svg"></svg>
+	</div>
+	<div id="control">
+			The algorithm consists of 4 steps.
+			<ol>
+				<li class='process-current' id="action-calcdist">
+					<span class="ulable"><b>Calculate distance</b> from the test point to every other point.</span>
+					<span class="p-state"> [Done]</span>
+					<i>Click on the canvas on left to add a point and start the algorithm</i>
+				</li>
+				<li class="process-pending" data="sort" id="action-sort">
+					<span class="ulable"><b>Sort</b> all the distances in ascending order</span>
+					<span class="p-state"> [Done]</span>
+					<i>Click here to start</i>
+				</li>
+				<li class="process-pending" id="action-filterAndVote">
+					<span class="ulable"><b>Filter</b> & <b>Vote</b> the distances based on k values</span>
+					<span class="p-state"> [Done]</span>
+					<input type="range" min="0" max="10" value="3" class="slider" id="k-val"  data="filterAndVote" style="margin-top: 15px;">
+					<p class="warning-msg">
+						Click on the slider to start. In this case, the algorithm will start with default value. Alternatively you can drag the slider. <b>Current K value is:</b><span id="k-val-pane">3</span>
+					</p>
+
+					<p class="voting-msg" id="voting-res">
+						Voting result will be declared here.
+					</p>
+				</li>
+			</ol>
+			<div class="slider-con">
+		</div>
+	</div>
+	<div id="info">
+		
+	</div>
+
+	<script type="text/javascript" src="./data/data.js"></script>
+	<script type="text/javascript" src="./d3.min.js"></script>
+	<script type="text/javascript" src="./d3-scale-chromatic.min.js"></script>
+	<script type="text/javascript" src="./main.js"></script>
+</body>
+</html>
