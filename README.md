@@ -14,7 +14,7 @@ The algorithm consists of the following stages
 - Filter the distance based on the value of K
 - Majority vote the filtered distance
 
-### [Checkout the demo for the algorithm](https://akash-goswami.github.io/knn-what-how-why/)
+### [Checkout demo for the algorithm](https://akash-goswami.github.io/knn-what-how-why/)
 
 
 ## KNN-Why
