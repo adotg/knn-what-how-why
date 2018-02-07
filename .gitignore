@@ -8,3 +8,6 @@ impl.py
 
 # Large data file
 data/
+
+# Include prepared data folder
+!docs/data/
