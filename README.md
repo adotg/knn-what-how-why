@@ -28,7 +28,7 @@ Although its not a state of the art algorithm, clever use of knn can be found in
 
 ### About this project
 
-[Intro to image classification with KNN)(https://medium.com/@YearsOfNoLight/intro-to-image-classification-with-knn-987bc112f0c2)
+[Intro to image classification with KNN](https://medium.com/@YearsOfNoLight/intro-to-image-classification-with-knn-987bc112f0c2)
 
 ---
 ### Prerequisite 
